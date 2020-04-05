@@ -42,6 +42,7 @@ public class SeckillServiceImpl implements SeckillService {
     @Autowired
     private OrdersDao ordersDao;
 
+
     /**
      * 只有时间到时，才能获取秒杀地址的MD5
      * 防止有人在时间没到时，就通过后台接口提前秒杀

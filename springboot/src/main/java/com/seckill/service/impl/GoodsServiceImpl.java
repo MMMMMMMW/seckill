@@ -4,6 +4,7 @@ import com.seckill.dao.GoodsDao;
 import com.seckill.entity.Goods;
 import com.seckill.service.GoodsService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,6 +19,9 @@ public class GoodsServiceImpl implements GoodsService {
 
     @Autowired
     private GoodsDao goodsDao;
+
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Override
     public List<Goods> getGoodsList(int start,int length) {

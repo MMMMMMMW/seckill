@@ -7,8 +7,10 @@ import com.seckill.entity.Goods;
 import com.seckill.enums.SeckillEnum;
 import com.seckill.exception.SeckillException;
 import com.seckill.service.GoodsService;
+import com.seckill.service.RedisService;
 import com.seckill.service.SeckillService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.Cookie;
@@ -35,9 +37,12 @@ public class SeckillController {
     @Autowired
     private GoodsService goodsService;
 
+    @Autowired
+    private RedisService redisService;
+
     @GetMapping("/{start}/list")
     public List<Goods> getGoodsList(@PathVariable("start") int start){
-        return goodsService.getGoodsList(start,10);
+        return redisService.getGoodsAll(start,10);
     }
 
     @GetMapping("/{goodsId}/detail")
@@ -100,4 +105,13 @@ public class SeckillController {
         return goodsService.getGoodsNumber();
     }
 
+//    @PostMapping("/set")
+//    public void setRedis(@RequestBody Goods goods){
+//        redisTemplate.opsForValue().set("goods",goods);
+//    }
+//
+//    @GetMapping("/{id}/get")
+//    public Goods getRedis(@PathVariable("id") Long id){
+//        return (Goods)redisTemplate.opsForValue().get("goods");
+//    }
 }

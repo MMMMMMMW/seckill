@@ -16,7 +16,8 @@ import java.util.List;
 @Mapper
 public interface GoodsDao {
 
-    @Select("select * from goods limit #{start},#{length}")
+    //按秒杀的结束时间降序查询
+    @Select("select * from goods order by end_time desc limit #{start},#{length}")
     List<Goods> findAll(@Param("start") int start,@Param("length") int length);
 
     @Select("select * from goods where id = #{id}")
