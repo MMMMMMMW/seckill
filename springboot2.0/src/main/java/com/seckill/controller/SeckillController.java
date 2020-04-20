@@ -6,6 +6,7 @@ import com.seckill.dto.SeckillUrl;
 import com.seckill.entity.Goods;
 import com.seckill.enums.SeckillEnum;
 import com.seckill.exception.SeckillException;
+import com.seckill.service.CacheService;
 import com.seckill.service.GoodsService;
 import com.seckill.service.RedisService;
 import com.seckill.service.SeckillService;
@@ -39,6 +40,9 @@ public class SeckillController {
 
     @Autowired
     private RedisService redisService;
+
+    @Autowired
+    private CacheService cacheService;
 
     @GetMapping("/{start}/list")
     public List<Goods> getGoodsList(@PathVariable("start") int start){
@@ -80,9 +84,19 @@ public class SeckillController {
                 || userAddress.equals("NULL") || userId.equals("NULL") || userName.equals("NULL")){
             return new SeckillResult<SeckillExecution>(false,null,"收货信息未填写完整");
         }
+        //先判断是否秒杀结束
+        if (cacheService.getCommonCache("end:"+goodsId) != null)
+            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.END.getInfo());
+        else if(redisService.getGoodsEnd(goodsId)){
+            cacheService.setCommonCache("end:"+goodsId,new Object());
+            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.END.getInfo());
+        }
 
-        //先在Redis中判断是否重复秒杀
-        if (redisService.getRepeatButKey(goodsId,userId)) {
+        //再在判断是否重复秒杀
+        if (cacheService.getCommonCache("success:"+goodsId+":"+userId) != null)
+            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.REPEAT_KILL.getInfo());
+        else if (redisService.getRepeatButKey(goodsId,userId)) {
+            cacheService.setCommonCache("success:"+goodsId+":"+userId,new Object());
             return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.REPEAT_KILL.getInfo());
         }
 
@@ -143,43 +157,59 @@ public class SeckillController {
      * @param userId
      * @return
      */
-//    @PostMapping("/test/{goodsId}/{userId}/execution")
-//    public SeckillResult<SeckillExecution> executeSeckill_test(
-//            @PathVariable("goodsId") Long goodsId,
-//            @PathVariable("userId") Long userId){
-//        String userAddress = "压力测试";
-//        String userName = "压力测试";
-//
-//        //事先在Redis中判断是否重复秒杀
+    @PostMapping("/test/{goodsId}/{userId}/execution")
+    public SeckillResult<SeckillExecution> executeSeckill_test(
+            @PathVariable("goodsId") Long goodsId,
+            @PathVariable("userId") Long userId){
+        String userAddress = "压力测试";
+        String userName = "压力测试";
+
+        //先判断是否秒杀结束
+        if (cacheService.getCommonCache("end:"+goodsId) != null)
+            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.END.getInfo());
+        else if(redisService.getGoodsEnd(goodsId)){
+            cacheService.setCommonCache("end:"+goodsId,new Object());
+            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.END.getInfo());
+        }
+
+        //再在判断是否重复秒杀
+        if (cacheService.getCommonCache("success:"+goodsId+":"+userId) != null)
+            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.REPEAT_KILL.getInfo());
+        else if (redisService.getRepeatButKey(goodsId,userId)) {
+            cacheService.setCommonCache("success:"+goodsId+":"+userId,new Object());
+            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.REPEAT_KILL.getInfo());
+        }
+
+//        //先在Redis中判断是否重复秒杀
 //        if (redisService.getRepeatButKey(goodsId,userId)) {
-//            System.out.println("重复秒杀判断！！！！！！！！！！！！！！！！！");
 //            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.REPEAT_KILL.getInfo());
 //        }
-//
-//        //库存减1，在此之前会判断是否有表示秒杀结束的key
-//        if (redisService.decreaseGoodsNumber(goodsId) < 0){
-//            redisService.increaseGoodsNumber(goodsId);
-//            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.END.getInfo());
-//        }
-//
-//        try{
-//            SeckillExecution execution = seckillService.executeSeckill(goodsId,userId,userName,userAddress,seckillService.exportSeckillUrl(goodsId).getMd5());
-//            //秒杀成功，将商品与用户的id作为key放入Redis中，之后便无需判断重复秒杀
-//            redisService.setRepeatBuyKey(goodsId,userId);
-//            return new SeckillResult<SeckillExecution>(true,execution,null);
-//        } catch (SeckillException e){
-//            //本来该用户就已经有该商品的订单时返回错误，此时也需要设置重复秒杀的key
-//            if (e.getMessage().equals(SeckillEnum.REPEAT_KILL.getInfo()))
-//                redisService.setRepeatBuyKey(goodsId,userId);
-//            //秒杀结束时设置key
-//            else if (e.getMessage().equals(SeckillEnum.END.getInfo()) )
-//                redisService.setGoodsEnd(goodsId);
-//            //此时秒杀失败，将Redis之前减的库存再加回去
-//            redisService.increaseGoodsNumber(goodsId);
-//            return new SeckillResult<SeckillExecution>(false,null,e.getMessage());
-//        } catch (Exception e){
-//            e.printStackTrace();
-//            return new SeckillResult<SeckillExecution>(false,null, SeckillEnum.SYSTEM_ERROR.getInfo());
-//        }
-//    }
+
+
+        //库存减1，在此之前会判断是否有表示秒杀结束的key
+        if (redisService.decreaseGoodsNumber(goodsId) < 0){
+            redisService.increaseGoodsNumber(goodsId);
+            return new SeckillResult<SeckillExecution>(false, null, SeckillEnum.END.getInfo());
+        }
+
+        try{
+            SeckillExecution execution = seckillService.executeSeckill(goodsId,userId,userName,userAddress,seckillService.exportSeckillUrl(goodsId).getMd5());
+            //秒杀成功，将商品与用户的id作为key放入Redis中，之后便无需判断重复秒杀
+            redisService.setRepeatBuyKey(goodsId,userId);
+            return new SeckillResult<SeckillExecution>(true,execution,null);
+        } catch (SeckillException e){
+            //本来该用户就已经有该商品的订单时返回错误，此时也需要设置重复秒杀的key
+            if (e.getMessage().equals(SeckillEnum.REPEAT_KILL.getInfo()))
+                redisService.setRepeatBuyKey(goodsId,userId);
+            //秒杀结束时设置key
+            else if (e.getMessage().equals(SeckillEnum.END.getInfo()) )
+                redisService.setGoodsEnd(goodsId);
+            //此时秒杀失败，将Redis之前减的库存再加回去
+            redisService.increaseGoodsNumber(goodsId);
+            return new SeckillResult<SeckillExecution>(false,null,e.getMessage());
+        } catch (Exception e){
+            e.printStackTrace();
+            return new SeckillResult<SeckillExecution>(false,null, SeckillEnum.SYSTEM_ERROR.getInfo());
+        }
+    }
 }

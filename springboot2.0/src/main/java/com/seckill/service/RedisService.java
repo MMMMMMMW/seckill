@@ -48,4 +48,6 @@ public interface RedisService {
      * @param goodsId
      */
     void setGoodsEnd(Long goodsId);
+
+    boolean getGoodsEnd(Long goodsId);
 }

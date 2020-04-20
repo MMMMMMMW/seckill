@@ -75,6 +75,11 @@ public class RedisServiceImpl implements RedisService {
         redisTemplate.expire("end:"+goodsId,3,TimeUnit.DAYS);
     }
 
+    @Override
+    public boolean getGoodsEnd(Long goodsId) {
+        return redisTemplate.hasKey("end:"+goodsId);
+    }
+
 
     @Override
     public int decreaseGoodsNumber(Long goodsId) {

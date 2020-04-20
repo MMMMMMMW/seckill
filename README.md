@@ -37,6 +37,11 @@
 #### 重复秒杀优化
 当一个用户秒杀成功或`MySQL`返回重复秒杀的结果后，设置一个`key`= `success:商品Id:用户Id`到`Redis`中，生存时间10分钟，这样，同一用户下次秒杀同一商品时，假如存在该`key`，则直接返回`重复秒杀`即可。
 
+#### 热点数据本地一级缓存
+虽然`Redis`较快，但终究是设置在其他服务器中，网络会有延迟，所以设置了本地缓存作为一级缓存。  
+由于本地缓存在JVM中，所有容量较少，使用了`google.guava`，基于LRU，专门用来存储热点数据。  
+我们首先访问本地一级缓存，如果不存在，再访问Redis二级缓存，还不存在才访问MySQL。
+
 #### Jmeter压力测试
 ![jmeter](https://github.com/MMMMMMMW/seckill/blob/master/image/seckill2.0.png?raw=true)
 
