@@ -94,6 +94,7 @@
                 message: '收货信息保存成功',
                 type: 'success'
             });
+            this.$router.push({path:'/'})
         }
 
       },
